@@ -2,8 +2,8 @@
 # the installer layered on top of the cluster-native Linux installer image.
 
 # We copy from the -artifacts images because they are statically linked
-FROM registry.ci.openshift.org/ocp/5.0:installer-kube-apiserver-artifacts AS kas-artifacts
-FROM registry.ci.openshift.org/ocp/5.0:installer-etcd-artifacts AS etcd-artifacts
+FROM quay-proxy.ci.openshift.org/openshift/ci:ocp_5.0_installer-kube-apiserver-artifacts AS kas-artifacts
+FROM quay-proxy.ci.openshift.org/openshift/ci:ocp_5.0_installer-etcd-artifacts AS etcd-artifacts
 
 # FIPS support is offered via the baremetal-installer image
 

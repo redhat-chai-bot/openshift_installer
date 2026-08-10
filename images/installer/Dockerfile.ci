@@ -2,8 +2,8 @@
 # It builds an image containing only the openshift-install.
 
 # We copy from the -artifacts images because they are statically linked
-FROM registry.ci.openshift.org/ocp/5.0:installer-kube-apiserver-artifacts AS kas-artifacts
-FROM registry.ci.openshift.org/ocp/5.0:installer-etcd-artifacts AS etcd-artifacts
+FROM quay-proxy.ci.openshift.org/openshift/ci:ocp_5.0_installer-kube-apiserver-artifacts AS kas-artifacts
+FROM quay-proxy.ci.openshift.org/openshift/ci:ocp_5.0_installer-etcd-artifacts AS etcd-artifacts
 
 FROM registry.ci.openshift.org/ocp/builder:rhel-9-golang-1.26-openshift-5.0 AS builder
 # FIPS support is offered via the baremetal-installer image
