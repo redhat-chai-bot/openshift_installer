@@ -13,6 +13,12 @@ replace (
 	sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.13.2
 )
 
+// Pin x/exp to a version that requires go 1.25.0. The latest x/exp
+// (v0.0.0-20260820142414-ca536658362e) bumped its go directive to
+// go 1.26.0, which causes `go mod tidy` to fail with
+// GOTOOLCHAIN=local on Go 1.25.x toolchains used in CI.
+replace golang.org/x/exp => golang.org/x/exp v0.0.0-20260727155853-b88d891fe743
+
 require sigs.k8s.io/cluster-api-provider-gcp v1.13.1-0.20260811115611-472d34c0640f
 
 require (
