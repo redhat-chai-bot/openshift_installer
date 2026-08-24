@@ -978,6 +978,120 @@ func TestValidateMachinePool(t *testing.T) {
 			},
 			expected: `^test-path.identity.type: Invalid value: "None": userAssignedIdentities may only be used with type: UserAssigned$`,
 		},
+		// OCPBUGS-59520: empty storageAccountType on data disk managedDisk
+		{
+			name:          "master data disk with empty storageAccountType should fail",
+			azurePlatform: azure.PublicCloud,
+			pool: &types.MachinePool{
+				Name: "master",
+				DiskSetup: []types.Disk{{
+					Type: "etcd",
+					Etcd: &types.DiskEtcd{PlatformDiskID: "etcd"},
+				}},
+				Platform: types.MachinePoolPlatform{
+					Azure: &azure.MachinePool{
+						DataDisks: []capz.DataDisk{{
+							NameSuffix: "etcd",
+							DiskSizeGB: 100,
+							Lun:        ptr.To(int32(0)),
+							ManagedDisk: &capz.ManagedDiskParameters{
+								StorageAccountType: "",
+							},
+						}},
+					},
+				},
+			},
+			expected: `^test-path\.dataDisks\[0\]\.managedDisk\.storageAccountType: Invalid value: "": storageAccount type must not be empty$`,
+		},
+		{
+			name:          "worker data disk with empty storageAccountType should fail",
+			azurePlatform: azure.PublicCloud,
+			pool: &types.MachinePool{
+				Name: "worker",
+				Platform: types.MachinePoolPlatform{
+					Azure: &azure.MachinePool{
+						DataDisks: []capz.DataDisk{{
+							NameSuffix: "data",
+							DiskSizeGB: 100,
+							Lun:        ptr.To(int32(0)),
+							ManagedDisk: &capz.ManagedDiskParameters{
+								StorageAccountType: "",
+							},
+						}},
+					},
+				},
+			},
+			expected: `^test-path\.dataDisks\[0\]\.managedDisk\.storageAccountType: Invalid value: "": storageAccount type must not be empty$`,
+		},
+		{
+			name:          "data disk with valid storageAccountType should pass",
+			azurePlatform: azure.PublicCloud,
+			pool: &types.MachinePool{
+				Name: "master",
+				DiskSetup: []types.Disk{{
+					Type: "etcd",
+					Etcd: &types.DiskEtcd{PlatformDiskID: "etcd"},
+				}},
+				Platform: types.MachinePoolPlatform{
+					Azure: &azure.MachinePool{
+						DataDisks: []capz.DataDisk{{
+							NameSuffix: "etcd",
+							DiskSizeGB: 100,
+							Lun:        ptr.To(int32(0)),
+							ManagedDisk: &capz.ManagedDiskParameters{
+								StorageAccountType: "Premium_LRS",
+							},
+						}},
+					},
+				},
+			},
+		},
+		{
+			name:          "data disk without managedDisk should pass",
+			azurePlatform: azure.PublicCloud,
+			pool: &types.MachinePool{
+				Name: "worker",
+				Platform: types.MachinePoolPlatform{
+					Azure: &azure.MachinePool{
+						DataDisks: []capz.DataDisk{{
+							NameSuffix: "data",
+							DiskSizeGB: 100,
+							Lun:        ptr.To(int32(0)),
+						}},
+					},
+				},
+			},
+		},
+		{
+			name:          "multiple data disks one with empty storageAccountType should fail",
+			azurePlatform: azure.PublicCloud,
+			pool: &types.MachinePool{
+				Name: "worker",
+				Platform: types.MachinePoolPlatform{
+					Azure: &azure.MachinePool{
+						DataDisks: []capz.DataDisk{
+							{
+								NameSuffix: "data1",
+								DiskSizeGB: 100,
+								Lun:        ptr.To(int32(0)),
+								ManagedDisk: &capz.ManagedDiskParameters{
+									StorageAccountType: "Premium_LRS",
+								},
+							},
+							{
+								NameSuffix: "data2",
+								DiskSizeGB: 200,
+								Lun:        ptr.To(int32(1)),
+								ManagedDisk: &capz.ManagedDiskParameters{
+									StorageAccountType: "",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: `^test-path\.dataDisks\[1\]\.managedDisk\.storageAccountType: Invalid value: "": storageAccount type must not be empty$`,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

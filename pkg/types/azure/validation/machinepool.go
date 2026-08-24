@@ -133,6 +133,11 @@ func ValidateMachinePool(p *azure.MachinePool, poolName string, platform *azure.
 		}
 	}
 
+	// Validate individual data disk properties (OCPBUGS-59520)
+	if len(p.DataDisks) > 0 {
+		allErrs = append(allErrs, validateDataDisks(p, fldPath.Child("dataDisks"))...)
+	}
+
 	allErrs = append(allErrs, validateOSImage(p, fldPath)...)
 	allErrs = append(allErrs, validateIdentity(poolName, p, fldPath.Child("identity"))...)
 
@@ -186,6 +191,24 @@ func validateDataDiskSetup(azurePool *azure.MachinePool, pool *types.MachinePool
 					allErrs = append(allErrs, field.Invalid(fldPath.Child("NameSuffix"), d.NameSuffix, fmt.Sprintf("does not match user defined PlatformDiskID %q", setup.UserDefined.PlatformDiskID)))
 				}
 			}
+		}
+	}
+
+	return allErrs
+}
+
+// validateDataDisks checks that each data disk with a managedDisk has a
+// non-empty storageAccountType. The CAPZ admission webhook rejects empty
+// values, so catching this early gives a clearer error message.
+func validateDataDisks(p *azure.MachinePool, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	for i, dataDisk := range p.DataDisks {
+		if dataDisk.ManagedDisk != nil && dataDisk.ManagedDisk.StorageAccountType == "" {
+			allErrs = append(allErrs, field.Invalid(
+				fldPath.Index(i).Child("managedDisk").Child("storageAccountType"),
+				dataDisk.ManagedDisk.StorageAccountType,
+				"storageAccount type must not be empty"))
 		}
 	}
 
