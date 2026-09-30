@@ -119,16 +119,8 @@ func (a *PlatformQuotaCheck) Generate(ctx context.Context, dependencies asset.Pa
 	case typesgcp.Name:
 		services := []string{"compute.googleapis.com", "iam.googleapis.com"}
 		q, err := quotagcp.Load(ctx, ic.Config.Platform.GCP.ProjectID, ic.Config.Platform.GCP.Endpoint, services...)
-		if quotagcp.IsUnauthorized(err) {
-			logrus.Warnf("Missing permissions to fetch Quotas and therefore will skip checking them: %v, make sure you have `roles/servicemanagement.quotaViewer` assigned to the user.", err)
-			return nil
-		}
-		if quotagcp.IsTransient(err) {
-			logrus.Warnf("Unable to fetch Quotas due to a transient API error and therefore will skip checking them: %v", err)
-			return nil
-		}
-		if err != nil {
-			return errors.Wrapf(err, "failed to load Quota for services: %s", strings.Join(services, ", "))
+		if skip, err := handleGCPQuotaLoadError(err, services); skip || err != nil {
+			return err
 		}
 		endpointName := ""
 		endpoint := ic.Config.Platform.GCP.Endpoint
@@ -179,6 +171,21 @@ func (a *PlatformQuotaCheck) Generate(ctx context.Context, dependencies asset.Pa
 		err = fmt.Errorf("unknown platform type %q", platform)
 	}
 	return err
+}
+
+func handleGCPQuotaLoadError(err error, services []string) (bool, error) {
+	if quotagcp.IsUnauthorized(err) {
+		logrus.Warnf("Missing permissions to fetch Quotas and therefore will skip checking them: %v, make sure you have `roles/servicemanagement.quotaViewer` assigned to the user.", err)
+		return true, nil
+	}
+	if quotagcp.IsTransient(err) {
+		logrus.Warnf("Unable to fetch Quotas due to a transient API error and therefore will skip checking them: %v", err)
+		return true, nil
+	}
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to load Quota for services: %s", strings.Join(services, ", "))
+	}
+	return false, nil
 }
 
 // Name returns the human-friendly name of the asset.
